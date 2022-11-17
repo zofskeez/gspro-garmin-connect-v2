@@ -126,6 +126,7 @@ class GarminConnect {
     }
 
     handleDisconnect() {
+        clearInterval(this.intervalID)
         this.client.end()
         this.client = null
         this.ipcPort.postMessage({
@@ -159,12 +160,8 @@ class GarminConnect {
                     message: 'R10 stopped responding...',
                     level: 'error',
                 })
-                if (this.intervalID) {
-                    clearInterval(this.intervalID)
-                }
                 this.handleDisconnect()
                 this.listen()
-            } else {
             }
         }, 3000)
     }
@@ -187,9 +184,8 @@ class GarminConnect {
 
         this.client.setEncoding('UTF8')
 
-        if (this.intervalID) {
-            clearInterval(this.intervalID)
-        }
+        clearInterval(this.intervalID)
+        
         this.intervalID = setInterval(() => {
             this.sendPing()
         }, 10000)
