@@ -53,7 +53,7 @@ class GarminConnect {
         })
 
         if (this.client) {
-            handleDisconnect()
+            this.handleDisconnect()
         }
         this.listen()
     }
@@ -104,7 +104,7 @@ class GarminConnect {
                 this.client.write(SimMessages.get_handshake_message(2))
                 break
             case 'Disconnect':
-                this.handleDisconnect()
+                this.handleDisconnect(true)
                 break
             case 'Pong':
                 this.handlePong()
@@ -126,7 +126,7 @@ class GarminConnect {
         }
     }
 
-    handleDisconnect() {
+    handleDisconnect(reconnect) {
         clearInterval(this.intervalID)
         this.client.end()
         this.client = null
@@ -143,6 +143,9 @@ class GarminConnect {
             type: messageTypes.gsPro.shot,
             ready: false,
         })
+        if (reconnect) {
+            this.listen()
+        }
     }
 
     handlePong() {
@@ -161,8 +164,7 @@ class GarminConnect {
                     message: 'R10 stopped responding...',
                     level: 'error',
                 })
-                this.handleDisconnect()
-                this.listen()
+                this.handleDisconnect(reconnect)
             }
         }, 3000)
     }
@@ -203,17 +205,17 @@ class GarminConnect {
 
         this.client.on('close', (hadError) => {
             console.log('client connection closed.  Had error: ', hadError)
-            this.listen()
+            this.handleDisconnect(true)
         })
 
         this.client.on('error', (e) => {
             console.log('client connection error', e)
+            this.handleDisconnect(true)
         })
     }
 
     updateClubType(clubType) {
         this.clubType = clubType
-
         this.client.write(SimMessages.get_success_message('SetClubType'))
     }
 
