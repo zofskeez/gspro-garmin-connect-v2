@@ -11,7 +11,25 @@ const results = Object.keys(nets).reduce((curr, name) => {
     return curr
 }, [])
 
-let localIp = results.length ? results[0] : '127.0.0.1'
+const localIp = results.length ? results[0] : '127.0.0.1'
+
+const messageTypes = {
+    garmin: {
+        info: 'garminInfo',
+        status: 'garminStatus'
+    },
+    gsPro: {
+        info: 'gsProInfo',
+        status: 'gsProStatus',
+        shot: 'gsProShot'
+    },
+    system: {
+        ipOptions: 'ipOptions',
+        setIp: 'setIp',
+        testShot: 'sendTestShot'
+    }
+}
 
 exports.localIP = localIp
 exports.localIPs = results
+exports.messageTypes = messageTypes

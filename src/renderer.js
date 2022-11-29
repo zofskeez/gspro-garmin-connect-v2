@@ -20,7 +20,7 @@ window.addEventListener('DOMContentLoaded', () => {
                     return
                 }
                 timeout = true
-                port.postMessage('sendTestShot')
+                port.postMessage({ type: messageTypes.system.testShot })
 
                 sendTestShotButton.classList.remove('send-test-shot')
                 sendTestShotButton.classList.add('send-test-shot-disabled')
@@ -46,23 +46,23 @@ window.addEventListener('DOMContentLoaded', () => {
 
     document.querySelector('#ip-settings').addEventListener('click', toggleModal)
 
-    function handleMessage(data) {
-        if (data.type) {
-            if (data.type === 'garminStatus') {
-                updateStatus('garmin', data.status)
-            } else if (data.type === 'R10Message') {
-                printMessage('R10', data.message, data.level)
-            } else if (data.type === 'gsProStatus') {
-                updateStatus('gspro', data.status)
-            } else if (data.type === 'gsProMessage') {
-                printMessage('GSPro', data.message, data.level)
-            } else if (data.type === 'gsProShotStatus') {
-                updateShotStatus(data.ready)
-            } else if (data.type === 'ipOptions') {
-                setIPOptions(data.data, true)
-            } else if (data.type === 'setIP') {
-                setIP(data.data)
-            }
+    function handleMessage({ type, status, message, level, data, ready }) {
+        const { garmin, gsPro, system } = messageTypes;
+
+        if (type === garmin.status) {
+            updateStatus('garmin', status)
+        } else if (type === garmin.info) {
+            printMessage('R10', message, level)
+        } else if (type === gsPro.status) {
+            updateStatus('gspro', status)
+        } else if (type === gsPro.info) {
+            printMessage('GSPro', message, level)
+        } else if (type === gsPro.shot) {
+            updateShotStatus(ready)
+        } else if (type === system.ipOptions) {
+            setIPOptions(data, true)
+        } else if (type === system.setIp) {
+            setIP(data)
         }
     }
 
@@ -100,7 +100,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
         ipOptionsContainer.addEventListener('click', (e) => {
             port.postMessage({
-                type: 'setIP',
+                type: messageTypes.system.setIp,
                 data: e.target.innerHTML,
             })
             toggleModal()

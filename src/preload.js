@@ -1,4 +1,5 @@
-const { ipcRenderer } = require('electron')
+const { contextBridge, ipcRenderer } = require('electron')
+const { messageTypes } = require('./helpers/helpers')
 
 const windowLoaded = new Promise((resolve) => {
     window.onload = resolve
@@ -9,3 +10,5 @@ ipcRenderer.on('main-port', async (event) => {
 
     window.postMessage('main-port', '*', event.ports)
 })
+
+contextBridge.exposeInMainWorld('messageTypes', messageTypes);

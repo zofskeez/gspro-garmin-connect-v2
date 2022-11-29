@@ -1,5 +1,6 @@
 const net = require('net')
 const ENV = require('./env')
+const { messageTypes } = require('./helpers/helpers')
 
 const TIMEOUT_MS = 5000
 
@@ -19,11 +20,11 @@ class GsProConnect {
 
     connectSocket() {
         this.ipcPort.postMessage({
-            type: 'gsProStatus',
+            type: messageTypes.gsPro.status,
             status: 'connecting',
         })
         this.ipcPort.postMessage({
-            type: 'gsProMessage',
+            type: messageTypes.gsPro.info,
             message: 'Trying to connect to GSPro...',
         })
 
@@ -35,7 +36,7 @@ class GsProConnect {
 
         this.socket.on('timeout', () => {
             this.ipcPort.postMessage({
-                type: 'GSProMessage',
+                type: messageTypes.gsPro.info,
                 message: "Can't connect to GSPro.  Trying again...",
             })
             this.socket.destroy()
@@ -47,7 +48,7 @@ class GsProConnect {
         this.socket.on('error', (e) => {
             if (e.code === 'ECONNREFUSED') {
                 this.ipcPort.postMessage({
-                    type: 'R10Message',
+                    type: messageTypes.garmin.info,
                     message:
                         'Connection refused.  Do you have the GSPro Connect window open?  Retrying...',
                 })
@@ -58,7 +59,7 @@ class GsProConnect {
                 console.log('error with gspro socket', e)
                 this.handleDisconnect()
                 this.ipcPort.postMessage({
-                    type: 'GSProMessage',
+                    type: messageTypes.gsPro.info,
                     message: 'Error with GSPro connection.  Trying to reconnect...',
                 })
                 setTimeout(() => {
@@ -75,16 +76,16 @@ class GsProConnect {
 
             this.socket = null
             this.ipcPort.postMessage({
-                type: 'gsProStatus',
+                type: messageTypes.gsPro.status,
                 status: 'disconnected',
             })
             this.ipcPort.postMessage({
-                type: 'gsProMessage',
+                type: messageTypes.gsPro.info,
                 message: 'Disconnected from GSPro...',
                 level: 'error',
             })
             this.ipcPort.postMessage({
-                type: 'gsProShotStatus',
+                type: messageTypes.gsPro.shot,
                 ready: false,
             })
         }
@@ -92,11 +93,11 @@ class GsProConnect {
 
     handleConnection() {
         this.ipcPort.postMessage({
-            type: 'gsProStatus',
+            type: messageTypes.gsPro.status,
             status: 'connected',
         })
         this.ipcPort.postMessage({
-            type: 'gsProMessage',
+            type: messageTypes.gsPro.info,
             message: 'Connected to GSPro',
             level: 'success',
         })

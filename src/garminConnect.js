@@ -1,5 +1,5 @@
 const net = require('net')
-const { localIP, localIPs } = require('./helpers/helpers')
+const { localIP, localIPs, messageTypes } = require('./helpers/helpers')
 const SimMessages = require('./helpers/simMessages')
 const ENV = require('./env')
 
@@ -16,20 +16,21 @@ class GarminConnect {
         this.pingTimeout = false
         this.intervalID = null
 
-        ipcPort.on('message', (event) => {
-            if (event.data === 'sendTestShot') {
+        this.ipcPort.on('message', (event) => {
+            const { type } = event.data;
+            if (type === messageTypes.system.testShot) {
                 this.sendTestShot()
-            } else if (event.data && event.data.type === 'setIP') {
+            } else if (type === messageTypes.system.setIp) {
                 this.setNewIP(event.data.data)
             }
         })
 
         this.ipcPort.postMessage({
-            type: 'ipOptions',
+            type: messageTypes.system.ipOptions,
             data: localIPs,
         })
         this.ipcPort.postMessage({
-            type: 'setIP',
+            type: messageTypes.system.setIp,
             data: this.localIP,
         })
 
@@ -40,14 +41,14 @@ class GarminConnect {
 
     setNewIP(ip) {
         this.ipcPort.postMessage({
-            type: 'setIP',
+            type: messageTypes.system.setIp,
             data: ip,
         })
 
         this.localIP = ip
 
         this.ipcPort.postMessage({
-            type: 'R10Message',
+            type: messageTypes.garmin.info,
             message: `Switching IP to ${ip}`,
         })
 
@@ -70,7 +71,7 @@ class GarminConnect {
         this.server.on('error', (e) => {
             if (e.code === 'EADDRINUSE') {
                 this.ipcPort.postMessage({
-                    type: 'R10Message',
+                    type: messageTypes.garmin.info,
                     message:
                         'Address already in use.  Do you have this program open in another window?  Retrying...',
                 })
@@ -84,11 +85,11 @@ class GarminConnect {
 
         this.server.listen(ENV.GARMIN_PORT, this.localIP, () => {
             this.ipcPort.postMessage({
-                type: 'garminStatus',
+                type: messageTypes.garmin.status,
                 status: 'connecting',
             })
             this.ipcPort.postMessage({
-                type: 'R10Message',
+                type: messageTypes.garmin.info,
                 message: 'Waiting for connection from R10...',
             })
         })
@@ -130,16 +131,16 @@ class GarminConnect {
         this.client.end()
         this.client = null
         this.ipcPort.postMessage({
-            type: 'garminStatus',
+            type: messageTypes.garmin.status,
             status: 'disconnected',
         })
         this.ipcPort.postMessage({
-            type: 'R10Message',
+            type: messageTypes.garmin.info,
             message: 'Disconnected from R10...',
             level: 'error',
         })
         this.ipcPort.postMessage({
-            type: 'gsProShotStatus',
+            type: messageTypes.gsPro.shot,
             ready: false,
         })
     }
@@ -156,7 +157,7 @@ class GarminConnect {
         setTimeout(() => {
             if (this.pingTimeout === true) {
                 this.ipcPort.postMessage({
-                    type: 'R10Message',
+                    type: messageTypes.garmin.info,
                     message: 'R10 stopped responding...',
                     level: 'error',
                 })
@@ -168,16 +169,16 @@ class GarminConnect {
 
     handleConnection(conn) {
         this.ipcPort.postMessage({
-            type: 'garminStatus',
+            type: messageTypes.garmin.status,
             status: 'connected',
         })
         this.ipcPort.postMessage({
-            type: 'R10Message',
+            type: messageTypes.garmin.info,
             message: 'Connected to R10',
             level: 'success',
         })
         this.ipcPort.postMessage({
-            type: 'gsProShotStatus',
+            type: messageTypes.gsPro.shot,
             ready: true,
         })
         this.client = conn
@@ -243,7 +244,7 @@ class GarminConnect {
         }
 
         this.ipcPort.postMessage({
-            type: 'gsProShotStatus',
+            type: messageTypes.gsPro.shot,
             ready: false,
         })
 
@@ -265,7 +266,7 @@ class GarminConnect {
         }
 
         this.ipcPort.postMessage({
-            type: 'gsProShotStatus',
+            type: messageTypes.gsPro.shot,
             ready: false,
         })
 
@@ -274,7 +275,7 @@ class GarminConnect {
 
     async sendShot() {
         this.ipcPort.postMessage({
-            type: 'gsProShotStatus',
+            type: messageTypes.gsPro.shot,
             ready: false,
         })
         this.gsProConnect.launchBall(this.ballData, this.clubData)
@@ -294,12 +295,12 @@ class GarminConnect {
 
         setTimeout(() => {
             this.ipcPort.postMessage({
-                type: 'gsProMessage',
+                type: messageTypes.gsPro.info,
                 message: '💯 Shot successful 💯',
                 level: 'success',
             })
             this.ipcPort.postMessage({
-                type: 'gsProShotStatus',
+                type: messageTypes.gsPro.shot,
                 ready: true,
             })
         }, 1000)
