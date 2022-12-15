@@ -114,12 +114,7 @@ class GsProConnect {
         })
 
         this.socket.on('data', (data) => {
-            try {
-                const dataObj = JSON.parse(data)
-                console.log('incoming message from gsPro:', dataObj)
-            } catch (e) {
-                console.log('error parsing incoming gsPro message', e)
-            }
+            console.log('incoming message from gsPro:', data);
         })
     }
 

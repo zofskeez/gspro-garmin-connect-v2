@@ -15,6 +15,9 @@ class GarminConnect {
         this.localIP = localIP
         this.pingTimeout = false
         this.intervalID = null
+        this.shotInProgress = false
+
+        
 
         this.ipcPort.on('message', (event) => {
             const { type } = event.data;
@@ -128,8 +131,10 @@ class GarminConnect {
 
     handleDisconnect(reconnect) {
         clearInterval(this.intervalID)
-        this.client.end()
-        this.client = null
+        if (this.client) {
+            this.client.end()
+            this.client = null
+        }
         this.ipcPort.postMessage({
             type: messageTypes.garmin.status,
             status: 'disconnected',
@@ -164,7 +169,7 @@ class GarminConnect {
                     message: 'R10 stopped responding...',
                     level: 'error',
                 })
-                this.handleDisconnect(reconnect)
+                this.handleDisconnect(true)
             }
         }, 3000)
     }
@@ -196,10 +201,15 @@ class GarminConnect {
         this.client.on('data', (data) => {
             try {
                 const dataObj = JSON.parse(data)
-                console.log('incoming message:', dataObj)
+                console.log('incoming message from garmin:', dataObj)
                 this.handleIncomingData(dataObj)
             } catch (e) {
+                // garmin periodically sends back malformed json string {"Type":"SendShot"}{"Type":"SendShot"}
+                // if we don't handle this the garmin golf app will get stuck in a waiting state (yellow hourglass)
+                // consider the type as send shot for any errors so we can make the round trip to gspro and back
+                console.log('incoming message from garmin:', data)
                 console.log('error parsing incoming message', e)
+                this.handleIncomingData({ Type: 'SendShot' });
             }
         })
 
@@ -276,11 +286,27 @@ class GarminConnect {
     }
 
     async sendShot() {
-        this.ipcPort.postMessage({
-            type: messageTypes.gsPro.shot,
-            ready: false,
-        })
-        this.gsProConnect.launchBall(this.ballData, this.clubData)
+        if (!this.shotInProgress) {
+            this.shotInProgress = true;
+            this.ipcPort.postMessage({
+                type: messageTypes.gsPro.shot,
+                ready: false,
+            })
+            this.gsProConnect.launchBall(this.ballData, this.clubData)
+
+            setTimeout(() => {
+                this.shotInProgress = false;
+                this.ipcPort.postMessage({
+                    type: messageTypes.gsPro.info,
+                    message: '💯 Shot successful 💯',
+                    level: 'success',
+                })
+                this.ipcPort.postMessage({
+                    type: messageTypes.gsPro.shot,
+                    ready: true,
+                })
+            }, 1000)
+        }
 
         if (this.client) {
             this.client.write(SimMessages.get_success_message('SendShot'))
@@ -294,18 +320,6 @@ class GarminConnect {
                 this.client.write(SimMessages.get_sim_command('Arm'))
             }, 1000)
         }
-
-        setTimeout(() => {
-            this.ipcPort.postMessage({
-                type: messageTypes.gsPro.info,
-                message: '💯 Shot successful 💯',
-                level: 'success',
-            })
-            this.ipcPort.postMessage({
-                type: messageTypes.gsPro.shot,
-                ready: true,
-            })
-        }, 1000)
     }
 }
 
